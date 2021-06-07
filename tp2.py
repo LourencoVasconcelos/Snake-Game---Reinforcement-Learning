@@ -39,9 +39,9 @@ def agent(state_shape, action_shape):
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    #print("CHOO CHOO")
-    discount_factor = 0.618
-    batch_size = 64 * 2
+    print("CHOO CHOO")
+    discount_factor = 0.8
+    batch_size = 2 * 2
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
     current_qs_list = model.predict(current_states)
