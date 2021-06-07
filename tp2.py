@@ -25,17 +25,21 @@ def agent(state_shape, action_shape):
 
     init = tf.keras.initializers.he_uniform()
     model = keras.Sequential()
-    model.add(keras.layers.Input(shape=(32,32,3)))
+    model.add(keras.layers.Input(shape=state_shape))
+    #Convulotional networks aqui?
     model.add(keras.layers.Flatten(name='features'))
-    model.add(keras.layers.Dense(24, activation='relu', kernel_initializer=init))
-    model.add(keras.layers.Dense(12, activation='relu', kernel_initializer=init))
+    model.add(keras.layers.Dense(1000, activation='relu', kernel_initializer=init))
+    model.add(keras.layers.Dense(500, activation='relu', kernel_initializer=init))
+    model.add(keras.layers.Dense(100, activation='relu', kernel_initializer=init))
+    model.add(keras.layers.Dense(50, activation='relu', kernel_initializer=init))
+    model.add(keras.layers.Dense(10, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(action_shape, activation='linear', kernel_initializer=init))
     model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam(lr=learning_rate), metrics=['accuracy'])
     print(model.summary())
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    print("CHOO CHOO")
+    #print("CHOO CHOO")
     discount_factor = 0.618
     batch_size = 64 * 2
     mini_batch = random.sample(replay_memory, batch_size)
@@ -65,7 +69,7 @@ def main():
     number_of_actions = 3
     
     env = SnakeGame(30,30,border=1)
-    board_shape = (env.board.shape[0]+2,env.border,env.board.shape[1]+2*env.border,env.board.shape[2])
+    board_shape = (env.board.shape[0]+2*env.border,env.board.shape[1]+2*env.border,env.board.shape[2])
 
     model = agent(board_shape, number_of_actions)
     target_model = agent(board_shape, number_of_actions)
@@ -74,10 +78,14 @@ def main():
     replay_memory = deque(maxlen=50000)
     steps_to_update_target_model = 0
     total_training_rewards = 0
+   
     for episode in range(train_episodes):
+        number_steps = 0
         observation = env.reset()[0]
         done = False
+        game_reward = 0
         while not done:
+            number_steps +=1
             steps_to_update_target_model += 1
             random_number = np.random.rand()
             if random_number <= epsilon:
@@ -89,18 +97,19 @@ def main():
             
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
             replay_memory.append([observation, action, reward, new_observation, done])
-            
-            
+            game_reward += reward
+            #env.print_state()
             if len(replay_memory) >= MIN_REPLAY_SIZE and (steps_to_update_target_model % 4 == 0 or done):
                 train(env, replay_memory, model, target_model, done)
             observation = new_observation
             total_training_rewards += reward
             if done:
-                print("Rewards: {} after n steps = {} with final reward = {}".format(total_training_rewards, episode, reward))
+                #print("Rewards: {} after n steps = {} with final reward = {}".format(total_training_rewards, episode, reward))
+                print("Finished after {} steps with reward = {}".format(number_steps, game_reward))
                 #total_training_rewards += 1
     
                 if steps_to_update_target_model >= 100:
-                    print("Copying main network weights to the target network weights")
+                    #print("Copying main network weights to the target network weights")
                     target_model.set_weights(model.get_weights())
                     steps_to_update_target_model = 0
                 break
