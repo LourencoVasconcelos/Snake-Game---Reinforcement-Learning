@@ -20,7 +20,7 @@ actions = {-1:'left',
 
 def agent(state_shape, action_shape):
     learning_rate = 0.001
-    init = tf.keras.initializers.HeUniform()
+    init = tf.keras.initializers.he_uniform()
     model = keras.Sequential()
     model.add(keras.layers.Dense(24, input_shape=state_shape, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(12, activation='relu', kernel_initializer=init))
@@ -76,7 +76,7 @@ def main():
             steps_to_update_target_model += 1
             # if True:
             #     env.render()  # cagar na imagem
-            
+
             
             random_number = np.random.rand()
             if random_number <= epsilon:
@@ -88,19 +88,6 @@ def main():
                 #ver como observação chega, fazer reshape para o modelo, obter resposta 
                 predicted = model.predict(reshaped).flatten()
                 action = np.argmax(predicted)
-                
-                
-                
-                
-                
-                 
-                
-                
-                
-                
-                 
-                
-                
                 
             new_observation, reward, done, info = env.step(action)
             replay_memory.append([observation, action, reward, new_observation, done])
