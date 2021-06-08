@@ -18,7 +18,7 @@ actions = {-1:'left',
             0:'same direction',
             1:'right' }
 
-train_episodes = 300
+train_episodes = 30000
 
 
 def agent(state_shape, action_shape):
@@ -31,15 +31,14 @@ def agent(state_shape, action_shape):
     model.add(keras.layers.Conv2D(16,(2,2), padding="same"))
     model.add(keras.layers.Activation("relu"))
     model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
-    model.add(keras.layers.Conv2D(32,(3,3), padding="same"))
+    model.add(keras.layers.Conv2D(32,(3,3), padding="same", strides=(2,2)))
     model.add(keras.layers.Activation("relu"))
     model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
-    model.add(keras.layers.Conv2D(64,(3,3), padding="same"))
+    model.add(keras.layers.Conv2D(64,(4,4), padding="same", strides=(2,2)))
     model.add(keras.layers.Activation("relu"))
     model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
-    model.add(keras.layers.Conv2D(128,(3,3), padding="same"))
+    model.add(keras.layers.Conv2D(128,(6,6), padding="same", strides=(3,3)))
     model.add(keras.layers.Activation("relu"))
-    model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
     
 
     model.add(keras.layers.Flatten(name='features'))
@@ -51,10 +50,8 @@ def agent(state_shape, action_shape):
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    # print(len(replay_memory))
-    # print("choo choo")
-    discount_factor = 0.8
-    batch_size = 1024
+    discount_factor = 0.9
+    batch_size = 256
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
     current_qs_list = model.predict(current_states)
@@ -73,7 +70,7 @@ def train(env, replay_memory, model, target_model, done):
         Y.append(current_qs)
     model.fit(np.array(X), np.array(Y), batch_size=batch_size, verbose=0, shuffle=True)
 
-def heuristic(env, replay_memory, n_examples):
+def heuristic(env, replay_memory, n_examples, board_shape):
     n=0
     random_threshold = 0.3
     while(n < n_examples):
@@ -85,32 +82,58 @@ def heuristic(env, replay_memory, n_examples):
             number_steps +=1
             random_number = np.random.rand()
             score,apple,head,tail,direction = env.get_state()
-            d_row = apple[0][0] - head[0]
-            d_col = apple[0][1] - head[1]
-            if abs(d_row)>abs(d_col):
-                if d_row<0:
-                    ddir = 0
+            y=head[0]
+            x=head[1]
+            d_y = apple[0][0] - y
+            d_x = apple[0][1] - x
+            if abs(d_y)>abs(d_x):#more vertical distance
+                if d_y<0:
+                    ddir = 0#up
                 else:
-                    ddir = 2
+                    ddir = 2#down
             else:
-                if d_col<0:
-                    ddir = 3
+                if d_x<0:
+                    ddir = 3#left
                 else:
-                    ddir = 1
+                    ddir = 1#right
             action = ddir-direction
-            if action>1: action = 1
-            if action<-1: action = -1
-            if(random_number < random_threshold):
-                action = random.choices(list(actions.keys()))[0] 
+            if action>1: action = 1#right
+            if action<-1: action = -1#left
+            n_it = 0
+            while True:
+                n_it += 1
+                y=head[0]
+                x=head[1]
+                new_dir = direction + action
+                if new_dir<0:
+                    new_dir = 3
+                elif new_dir > 3:
+                    new_dir = 0
+
+                if new_dir == 0:
+                    y = y-1
+                elif new_dir == 1:
+                    x = x+1
+                elif new_dir == 2:
+                    y = y+1
+                else:
+                    x = x-1
+                if ((y,x) in tail or x == 0 or y == 0 or x == board_shape[0]-2 or y == board_shape[0]-2) and n_it <15:
+                    action = random.choices(list(actions.keys()))[0]
+                else:
+                    break
+
+            # if(random_number < random_threshold):
+            #     action = random.choices(list(actions.keys()))[0] 
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
-            if(reward >= 1):
-                replay_memory.append([observation, action, reward, new_observation, done])
+            if(reward > 0):
+                replay_memory.append([observation, action, reward/number_steps, new_observation, done])
                 game_reward += reward
                 n+=1
 
 
 def main():
-    epsilon = 0.2
+    epsilon = 1
     max_epsilon = 1
     min_epsilon = 0.01
     decay = 0.01
@@ -124,7 +147,7 @@ def main():
     target_model.set_weights(model.get_weights())
     
     replay_memory = deque(maxlen=50000)
-    heuristic(env, replay_memory, 15000)
+    heuristic(env, replay_memory, 15000, board_shape)
     steps_to_update_target_model = 0
     total_training_rewards = 0
    
@@ -144,11 +167,13 @@ def main():
                 #action = np.argmax(predicted)-1
                 probabilities = np.exp(predicted)/sum(np.exp(predicted))#softmax
                 action = choices(list(actions.keys()), probabilities)
-                #print(probabilities)
+                print(predicted)
                 action = action[0]
             #print('chose action ' + actions[action])
             
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
+            if reward == 1:
+                print("APPLE")
             replay_memory.append([observation, action, reward, new_observation, done])
             game_reward += reward
             #env.print_state()
@@ -162,11 +187,11 @@ def main():
                 #total_training_rewards += 1
     
                 if steps_to_update_target_model >= 100:
-                    #print("Copying main network weights to the target network weights")
+                    print("Copying main network weights to the target network weights")
                     target_model.set_weights(model.get_weights())
                     steps_to_update_target_model = 0
                 break
-        #epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay * episode)
+        epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay * episode)
 
        
 main()
