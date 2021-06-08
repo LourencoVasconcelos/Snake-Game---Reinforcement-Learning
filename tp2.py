@@ -28,10 +28,12 @@ def agent(state_shape, action_shape):
     model = keras.Sequential()
     model.add(keras.layers.Input(shape=state_shape))
     #Convulotional networks aqui?
+    model.add(keras.layers.Conv2D(32,(3,3)))
+    model.add(keras.layers.Activation("relu"))
+    model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
+    model.add(keras.layers.Conv2D(64,(3,3)))
     model.add(keras.layers.Flatten(name='features'))
-    model.add(keras.layers.Dense(256, activation='relu', kernel_initializer=init))
-    model.add(keras.layers.Dense(128, activation='relu', kernel_initializer=init))
-    model.add(keras.layers.Dense(64, activation='relu', kernel_initializer=init))
+    model.add(keras.layers.Dense(32, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(16, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(action_shape, activation='linear', kernel_initializer=init))
     model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam(lr=learning_rate), metrics=['accuracy'])
@@ -96,14 +98,14 @@ def heuristic(env, replay_memory, n_examples):
 
 
 def main():
-    epsilon = 1
+    epsilon = 0.05
     max_epsilon = 1
     min_epsilon = 0.01
     decay = 0.01
     MIN_REPLAY_SIZE = 1024
     number_of_actions = 3
     
-    env = SnakeGame(30,30,border=1, grass_growth=0, max_grass = 0.05)
+    env = SnakeGame(30,30,border=1)
     board_shape = (env.board.shape[0]+2*env.border,env.board.shape[1]+2*env.border,env.board.shape[2])
 
     model = agent(board_shape, number_of_actions)
@@ -111,7 +113,7 @@ def main():
     target_model.set_weights(model.get_weights())
     
     replay_memory = deque(maxlen=50000)
-    heuristic(env, replay_memory, 50000)
+    heuristic(env, replay_memory, 5000)
     steps_to_update_target_model = 0
     total_training_rewards = 0
    
@@ -154,7 +156,7 @@ def main():
                     target_model.set_weights(model.get_weights())
                     steps_to_update_target_model = 0
                 break
-        epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay * episode)
+        #epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay * episode)
 
        
 main()
