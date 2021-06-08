@@ -27,14 +27,24 @@ def agent(state_shape, action_shape):
     init = tf.keras.initializers.he_uniform()
     model = keras.Sequential()
     model.add(keras.layers.Input(shape=state_shape))
-    #Convulotional networks aqui?
-    model.add(keras.layers.Conv2D(32,(3,3)))
+
+    model.add(keras.layers.Conv2D(16,(2,2), padding="same"))
     model.add(keras.layers.Activation("relu"))
     model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
-    model.add(keras.layers.Conv2D(64,(3,3)))
+    model.add(keras.layers.Conv2D(32,(3,3), padding="same"))
+    model.add(keras.layers.Activation("relu"))
+    model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
+    model.add(keras.layers.Conv2D(64,(3,3), padding="same"))
+    model.add(keras.layers.Activation("relu"))
+    model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
+    model.add(keras.layers.Conv2D(128,(3,3), padding="same"))
+    model.add(keras.layers.Activation("relu"))
+    model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
+    
+
     model.add(keras.layers.Flatten(name='features'))
+    model.add(keras.layers.Dense(128, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(32, activation='relu', kernel_initializer=init))
-    model.add(keras.layers.Dense(16, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(action_shape, activation='linear', kernel_initializer=init))
     model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam(lr=learning_rate), metrics=['accuracy'])
     print(model.summary())
@@ -65,6 +75,7 @@ def train(env, replay_memory, model, target_model, done):
 
 def heuristic(env, replay_memory, n_examples):
     n=0
+    random_threshold = 0.3
     while(n < n_examples):
         number_steps = 0
         done = False
@@ -88,23 +99,23 @@ def heuristic(env, replay_memory, n_examples):
                     ddir = 1
             action = ddir-direction
             if action>1: action = 1
-            if action<-1: action = -1  
+            if action<-1: action = -1
+            if(random_number < random_threshold):
+                action = random.choices(list(actions.keys()))[0] 
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
-            if(reward > 1):
+            if(reward >= 1):
                 replay_memory.append([observation, action, reward, new_observation, done])
                 game_reward += reward
                 n+=1
-                print(n)
 
 
 def main():
-    epsilon = 0.05
+    epsilon = 0.2
     max_epsilon = 1
     min_epsilon = 0.01
     decay = 0.01
     MIN_REPLAY_SIZE = 1024
     number_of_actions = 3
-    
     env = SnakeGame(30,30,border=1)
     board_shape = (env.board.shape[0]+2*env.border,env.board.shape[1]+2*env.border,env.board.shape[2])
 
@@ -113,7 +124,7 @@ def main():
     target_model.set_weights(model.get_weights())
     
     replay_memory = deque(maxlen=50000)
-    heuristic(env, replay_memory, 5000)
+    heuristic(env, replay_memory, 15000)
     steps_to_update_target_model = 0
     total_training_rewards = 0
    
@@ -139,7 +150,6 @@ def main():
             
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
             replay_memory.append([observation, action, reward, new_observation, done])
-            print(reward)
             game_reward += reward
             #env.print_state()
             if len(replay_memory) >= MIN_REPLAY_SIZE and (steps_to_update_target_model % 4 == 0 or done):
