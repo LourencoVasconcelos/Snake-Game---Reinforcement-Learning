@@ -60,7 +60,7 @@ def agent(state_shape, action_shape):
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    discount_factor = 0.95
+    discount_factor = 0.9
     batch_size = 256
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
@@ -200,8 +200,8 @@ def random_fill(env, replay_memory, n_examples, board_shape):
 def main():
     epsilon = 0.5
     max_epsilon = 0.5
-    min_epsilon = 0.001
-    decay = 0.01
+    min_epsilon = 0.0001
+    decay = 0.1
     MIN_REPLAY_SIZE = 1024
     number_of_actions = 3
     env = SnakeGame(30,30,border=1, max_grass = 0, food_amount = 1)
@@ -213,23 +213,19 @@ def main():
     
     replay_memory = deque(maxlen=100000)
     
-    heuristic(env, replay_memory, 50000, board_shape)
-    random_fill(env, replay_memory, 5000, board_shape)
+    heuristic(env, replay_memory, 75000, board_shape)
+    random_fill(env, replay_memory, 10000, board_shape)
     
     steps_to_update_target_model = 0
     total_training_rewards = 0
     i=0
+    i2=0
     for episode in range(train_episodes):
         number_steps = 0
         observation = env.reset()[0]
         done = False
         game_reward = 0
         while not done:
-            # print(i)
-            # if i > 5000:
-            #     plot_board("images/"+str(i)+".png", observation)
-            #     if i > 6000:
-            #         return 0
             i+=1
             number_steps +=1
             steps_to_update_target_model += 1
@@ -262,12 +258,47 @@ def main():
                   #  print("Copying main network weights to the target network weights")
                     target_model.set_weights(model.get_weights())
                     steps_to_update_target_model = 0
-                #if(i%5000):
-                #    heuristic(env, replay_memory, 2000, board_shape)
+                if(i>10000):
+                    i=0
+                    model.save('AP2/models/test_model_' + str(i2))
+                    i2 +=1
+                    heuristic(env, replay_memory, 2000, board_shape)
                     
                 break
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay * episode)
         print(epsilon)
+
+def run_pretrained(old_model, n_games):
+    number_of_actions = 3
+    env = SnakeGame(30,30,border=1, max_grass = 0.01,grass_growth=0.0001, food_amount = 1)
+    board_shape = (env.board.shape[0]+2*env.border,env.board.shape[1]+2*env.border,env.board.shape[2])
+
+    model = keras.models.load_model(old_model)
+    total_training_rewards = 0
+    i=0
+    for episode in range(n_games):
+        number_steps = 0
+        observation = env.reset()[0]
+        done = False
+        game_reward = 0
+        while not done:
+            plot_board("AP2/images/"+str(100000+i)+".png", observation)
+            i+=1
+            number_steps +=1
+            predicted = model.predict(observation.reshape([1,*board_shape])).flatten()
+            action = np.argmax(predicted)-1
+            print(action)
+            new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
+            observation=new_observation
+            if reward >= 1 or reward == -1:
+                if(reward >= 1):
+                    reward =1
+                game_reward += reward
+            total_training_rewards += reward
+            if done:
+                #print("Rewards: {} after n steps = {} with final reward = {}".format(total_training_rewards, episode, reward))
+                print("Finished after {} steps with reward = {}".format(number_steps, game_reward))
+                #total_training_rewards += 1
 
 def generate_gif():
     png_dir = 'images'
@@ -280,3 +311,4 @@ def generate_gif():
        
 main()
 #generate_gif()
+#run_pretrained('AP2/models/test_model_13', 300)
