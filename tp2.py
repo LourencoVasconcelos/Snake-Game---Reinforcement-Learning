@@ -4,6 +4,8 @@ Created on Mon Jun  7 17:27:03 2021
 
 @author: loure
 """
+import os
+import imageio
 
 import tensorflow as tf
 import numpy as np
@@ -11,6 +13,7 @@ from tensorflow.python.ops.init_ops_v2 import he_uniform
 from snake_game import SnakeGame
 from tensorflow import keras
 from collections import deque
+import matplotlib.pyplot as plt
 import random
 from random import choices
 
@@ -18,23 +21,33 @@ actions = {-1:'left',
             0:'same direction',
             1:'right' }
 
-train_episodes = 300
+train_episodes = 3000
 
+def plot_board(file_name,board,text=None):
+    plt.figure(figsize=(10,10))
+    plt.imshow(board)
+    plt.axis('off')
+    if text is not None:
+        plt.gca().text(3, 3, text, fontsize=45,color = 'yellow')
+    plt.savefig(file_name,bbox_inches='tight')
+    plt.close()
 
 def agent(state_shape, action_shape):
-    learning_rate = 0.01
+    learning_rate = 0.001
 
     init = tf.keras.initializers.he_uniform()
     model = keras.Sequential()
     model.add(keras.layers.Input(shape=state_shape))
 
-    model.add(keras.layers.Conv2D(64,(2,2), padding="same"))
+    model.add(keras.layers.Conv2D(16,(2,2), padding="same"))
     model.add(keras.layers.Activation("relu"))
-    model.add(keras.layers.Dropout(0.5))
     model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
-    model.add(keras.layers.Conv2D(64,(3,3), padding="same"))
+    model.add(keras.layers.Conv2D(32,(3,3), padding="same"))
     model.add(keras.layers.Activation("relu"))
-    model.add(keras.layers.MaxPooling2D(pool_size=(5,5)))
+    model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
+    model.add(keras.layers.Conv2D(64,(4,4), padding="same"))
+    model.add(keras.layers.Activation("relu"))
+    model.add(keras.layers.MaxPooling2D(pool_size=(4,4)))
     
 
     model.add(keras.layers.Flatten(name='features'))
@@ -47,7 +60,7 @@ def agent(state_shape, action_shape):
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    discount_factor = 1
+    discount_factor = 0.9
     batch_size = 256
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
@@ -101,7 +114,6 @@ def heuristic(env, replay_memory, n_examples, board_shape):
         observation = env.reset()[0]
         while not done:
             number_steps +=1
-            random_number = np.random.rand()
             score,apple,head,tail,direction = env.get_state()
             y,x = head
             y_apple, x_apple = apple[0]
@@ -130,6 +142,9 @@ def heuristic(env, replay_memory, n_examples, board_shape):
             if(diff_dir > 0):
                 if(diff_dir == 3):
                     action = -1
+                elif diff_dir==2 or diff_dir==-2:
+                    possible = [-1,1]
+                    action = random.choice(possible)
                 else:
                     action = 1
             elif(diff_dir < 0):
@@ -147,23 +162,19 @@ def heuristic(env, replay_memory, n_examples, board_shape):
                         break
 
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
+
             replay_memory.append([observation, action+1, reward, new_observation, done])
-            if(reward == -1):
-                deaths +=1
-            elif(reward ==1):
-                apples+=1
-                
+            observation = new_observation
+            #plot_board("images/"+str(1000+n)+".png", observation)
+            #print(n)
             n+=1
-    print("Apples, %d" % apples)
-    print("Deaths, %d" % deaths)
-    print("Average Apples, %d" % (apples/deaths))
 
 
 def main():
     epsilon = 0.5
     max_epsilon = 0.5
     min_epsilon = 0.01
-    decay = 0.001
+    decay = 0.01
     MIN_REPLAY_SIZE = 1024
     number_of_actions = 3
     env = SnakeGame(30,30,border=1, max_grass = 0, food_amount = 1)
@@ -175,15 +186,22 @@ def main():
     
     replay_memory = deque(maxlen=50000)
     heuristic(env, replay_memory, 50000, board_shape)
+
     steps_to_update_target_model = 0
     total_training_rewards = 0
-   
+    i=0
     for episode in range(train_episodes):
         number_steps = 0
         observation = env.reset()[0]
         done = False
         game_reward = 0
         while not done:
+            # print(i)
+            # if i > 5000:
+            #     plot_board("images/"+str(i)+".png", observation)
+            #     if i > 6000:
+            #         return 0
+            # i+=1
             number_steps +=1
             steps_to_update_target_model += 1
             random_number = np.random.rand()
@@ -198,8 +216,10 @@ def main():
             #print('chose action ' + actions[action])
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
             replay_memory.append([observation, action+1, reward, new_observation, done])
-            game_reward += reward
-            #env.print_state()
+            if reward >= 1 or reward == -1:
+                if(reward >= 1):
+                    reward =1
+                game_reward += reward
             if len(replay_memory) >= MIN_REPLAY_SIZE and (steps_to_update_target_model % 4 == 0 or done):
                 train(env, replay_memory, model, target_model, done)
             observation = new_observation
@@ -215,6 +235,16 @@ def main():
                     steps_to_update_target_model = 0
                 break
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay * episode)
+        print(epsilon)
 
+def generate_gif():
+    png_dir = 'images'
+    images = []
+    for file_name in sorted(os.listdir(png_dir)):
+        if file_name.endswith('.png'):
+            file_path = os.path.join(png_dir, file_name)
+            images.append(imageio.imread(file_path))
+    imageio.mimsave('movie.gif', images)
        
 main()
+#generate_gif()
