@@ -21,7 +21,7 @@ actions = {-1:'left',
             0:'same direction',
             1:'right' }
 
-train_episodes = 3000
+train_episodes = 100000
 
 def plot_board(file_name,board,text=None):
     plt.figure(figsize=(10,10))
@@ -60,7 +60,7 @@ def agent(state_shape, action_shape):
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    discount_factor = 0.9
+    discount_factor = 0.95
     batch_size = 256
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
@@ -160,20 +160,47 @@ def heuristic(env, replay_memory, n_examples, board_shape):
                     valid_move = check_move(x,y,action,direction,board_shape,head,tail)
                     if valid_move:
                         break
-
+            
+            
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
-
-            replay_memory.append([observation, action+1, reward, new_observation, done])
+            if(reward==0 and np.random.rand()>0.5):
+                replay_memory.append([observation, action+1, reward, new_observation, done])
+                n+=1
             observation = new_observation
             #plot_board("images/"+str(1000+n)+".png", observation)
             #print(n)
-            n+=1
+            
+            
+def random_fill(env, replay_memory, n_examples, board_shape):
+    n=0
+    apples = 0
+    deaths = 0
+    while(n < n_examples):
+        number_steps = 0
+        done = False
+        observation = env.reset()[0]
+        while not done:
+            number_steps +=1
+         
+            action= random.choices(list(actions.keys()))[0]
 
+            new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
+            replay_memory.append([observation, action+1, reward, new_observation, done])
+            observation = new_observation
+            if(reward == -1):
+                deaths +=1
+            elif(reward ==1):
+                apples+=1
+                
+            n+=1
+    print("Apples, %d" % apples)
+    print("Deaths, %d" % deaths)
+    print("Average Apples, %d" % (apples/deaths))
 
 def main():
     epsilon = 0.5
     max_epsilon = 0.5
-    min_epsilon = 0.01
+    min_epsilon = 0.001
     decay = 0.01
     MIN_REPLAY_SIZE = 1024
     number_of_actions = 3
@@ -184,9 +211,11 @@ def main():
     target_model = agent(board_shape, number_of_actions)
     target_model.set_weights(model.get_weights())
     
-    replay_memory = deque(maxlen=50000)
+    replay_memory = deque(maxlen=100000)
+    
     heuristic(env, replay_memory, 50000, board_shape)
-
+    random_fill(env, replay_memory, 5000, board_shape)
+    
     steps_to_update_target_model = 0
     total_training_rewards = 0
     i=0
@@ -201,7 +230,7 @@ def main():
             #     plot_board("images/"+str(i)+".png", observation)
             #     if i > 6000:
             #         return 0
-            # i+=1
+            i+=1
             number_steps +=1
             steps_to_update_target_model += 1
             random_number = np.random.rand()
@@ -220,7 +249,7 @@ def main():
                 if(reward >= 1):
                     reward =1
                 game_reward += reward
-            if len(replay_memory) >= MIN_REPLAY_SIZE and (steps_to_update_target_model % 4 == 0 or done):
+            if len(replay_memory) >= MIN_REPLAY_SIZE and (steps_to_update_target_model % 64 == 0 or done):
                 train(env, replay_memory, model, target_model, done)
             observation = new_observation
             total_training_rewards += reward
@@ -230,9 +259,12 @@ def main():
                 #total_training_rewards += 1
     
                 if steps_to_update_target_model >= 100:
-                    print("Copying main network weights to the target network weights")
+                  #  print("Copying main network weights to the target network weights")
                     target_model.set_weights(model.get_weights())
                     steps_to_update_target_model = 0
+                #if(i%5000):
+                #    heuristic(env, replay_memory, 2000, board_shape)
+                    
                 break
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay * episode)
         print(epsilon)
