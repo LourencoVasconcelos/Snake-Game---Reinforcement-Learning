@@ -16,18 +16,13 @@ from collections import deque
 import matplotlib.pyplot as plt
 import random
 from random import choices
+from pathlib import Path
 
 actions = {-1:'left',
             0:'same direction',
             1:'right' }
 
-train_episodes = 100000
-
-def process_reward(reward, n_steps):
-    if reward > 0:
-        return reward / n_steps
-    else:
-        return reward * n_steps
+train_episodes = 3000
 
 def plot_board(file_name,board,text=None):
     plt.figure(figsize=(10,10))
@@ -48,6 +43,9 @@ def agent(state_shape, action_shape):
     model.add(keras.layers.Conv2D(16,(2,2), padding="same"))
     model.add(keras.layers.Activation("relu"))
     model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
+    model.add(keras.layers.Conv2D(16,(2,2), padding="same"))
+    model.add(keras.layers.Activation("relu"))
+    model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
     model.add(keras.layers.Conv2D(32,(3,3), padding="same"))
     model.add(keras.layers.Activation("relu"))
     model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
@@ -57,8 +55,9 @@ def agent(state_shape, action_shape):
     
 
     model.add(keras.layers.Flatten(name='features'))
-    model.add(keras.layers.Dense(128, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(64, activation='relu', kernel_initializer=init))
+    model.add(keras.layers.Dense(64, activation='relu', kernel_initializer=init))
+    model.add(keras.layers.Dense(32, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(16, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(action_shape, activation='linear', kernel_initializer=init))
     model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam(lr=learning_rate), metrics=['accuracy'])
@@ -66,7 +65,7 @@ def agent(state_shape, action_shape):
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    discount_factor = 1
+    discount_factor = 0.1
     batch_size = 256
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
@@ -116,11 +115,9 @@ def heuristic(env, replay_memory, n_examples, board_shape):
     deaths = 0
     while(n < n_examples):
         number_steps = 0
-        steps_to_result = 0
         done = False
         observation = env.reset()[0]
         while not done:
-            steps_to_result +=1
             number_steps +=1
             score,apple,head,tail,direction = env.get_state()
             y,x = head
@@ -168,44 +165,21 @@ def heuristic(env, replay_memory, n_examples, board_shape):
                     valid_move = check_move(x,y,action,direction,board_shape,head,tail)
                     if valid_move:
                         break
-            
-            
-            new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
-            if(reward >=1 or reward <0):
-                steps_to_result = 0
 
-            if(reward==0 and np.random.rand()>0.5):
-                replay_memory.append([observation, action+1, process_reward(reward, steps_to_result), new_observation, done])
-                n+=1
+            new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
+
+            replay_memory.append([observation, action+1, reward, new_observation, done])
             observation = new_observation
             #plot_board("images/"+str(1000+n)+".png", observation)
             #print(n)
-            
-            
-def random_fill(env, replay_memory, n_examples, board_shape):
-    n=0
-    while(n < n_examples):
-        number_steps = 0
-        steps_to_result = 0
-        done = False
-        observation = env.reset()[0]
-        while not done:
-            number_steps +=1
-            steps_to_result +=1
-            action= random.choices(list(actions.keys()))[0]
-
-            new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
-            replay_memory.append([observation, action+1, process_reward(reward, steps_to_result), new_observation, done])
-            observation = new_observation
-            if(reward >=1 or reward <0):
-                steps_to_result = 0  
             n+=1
+
 
 def main():
     epsilon = 0.5
     max_epsilon = 0.5
-    min_epsilon = 0
-    decay = 0.001
+    min_epsilon = 0.01
+    decay = 0.01
     MIN_REPLAY_SIZE = 1024
     number_of_actions = 3
     env = SnakeGame(30,30,border=1, max_grass = 0, food_amount = 1)
@@ -215,11 +189,9 @@ def main():
     target_model = agent(board_shape, number_of_actions)
     target_model.set_weights(model.get_weights())
     
-    replay_memory = deque(maxlen=100000)
-    
-    heuristic(env, replay_memory, 75000, board_shape)
-    random_fill(env, replay_memory, 10000, board_shape)
-    
+    replay_memory = deque(maxlen=50000)
+    heuristic(env, replay_memory, 50000, board_shape)
+
     steps_to_update_target_model = 0
     total_training_rewards = 0
     i=0
@@ -229,10 +201,13 @@ def main():
         observation = env.reset()[0]
         done = False
         game_reward = 0
-        steps_to_result = 0
         while not done:
+            # print(i)
+            # if i > 5000:
+            #     plot_board("images/"+str(i)+".png", observation)
+            #     if i > 6000:
+            #         return 0
             i+=1
-            steps_to_result +=1
             number_steps +=1
             steps_to_update_target_model += 1
             random_number = np.random.rand()
@@ -246,28 +221,28 @@ def main():
                 # action = action[0]
             #print('chose action ' + actions[action])
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
-            replay_memory.append([observation, action+1, process_reward(reward, steps_to_result), new_observation, done])
+            replay_memory.append([observation, action+1, reward, new_observation, done])
             if reward >= 1 or reward == -1:
-                steps_to_result = 0
                 if(reward >= 1):
                     reward =1
                 game_reward += reward
-            if len(replay_memory) >= MIN_REPLAY_SIZE and (steps_to_update_target_model % 64 == 0 or done):
+            if len(replay_memory) >= MIN_REPLAY_SIZE and (steps_to_update_target_model % 16 == 0 or done):
                 train(env, replay_memory, model, target_model, done)
             observation = new_observation
             total_training_rewards += reward
             if done:
                 #print("Rewards: {} after n steps = {} with final reward = {}".format(total_training_rewards, episode, reward))
-                print("Finished after {} steps with reward = {}".format(number_steps, game_reward))
+                print("Finished after {} steps with reward = {}         i={}".format(number_steps, game_reward,i))
                 #total_training_rewards += 1
     
                 if steps_to_update_target_model >= 100:
-                  #  print("Copying main network weights to the target network weights")
+                    print("Copying main network weights to the target network weights")
                     target_model.set_weights(model.get_weights())
                     steps_to_update_target_model = 0
                 if(i>10000):
                     i=0
-                    model.save('AP2/models/test_model_' + str(i2))
+                    model.save('AP2/models/0.1gamma_model_' + str(i2))
+                    #print("Saved a model ")
                     i2 +=1
                     heuristic(env, replay_memory, 2000, board_shape)
                     
@@ -275,37 +250,72 @@ def main():
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay * episode)
         print(epsilon)
 
-def run_pretrained(old_model, n_games):
+
+
+                
+def run_pretrained(old_model, n_games, folder):
     number_of_actions = 3
-    env = SnakeGame(30,30,border=1, max_grass = 0.01,grass_growth=0.0001, food_amount = 1)
+    env = SnakeGame(30,30,border=1, food_amount = 1)
     board_shape = (env.board.shape[0]+2*env.border,env.board.shape[1]+2*env.border,env.board.shape[2])
 
     model = keras.models.load_model(old_model)
     total_training_rewards = 0
     i=0
+    steps = 0
+    apples = 0
     for episode in range(n_games):
         number_steps = 0
         observation = env.reset()[0]
         done = False
         game_reward = 0
         while not done:
-            plot_board("AP2/images/"+str(100000+i)+".png", observation)
+            #plot_board(folder + "/"+str(100000+i)+".png", observation)
             i+=1
             number_steps +=1
             predicted = model.predict(observation.reshape([1,*board_shape])).flatten()
             action = np.argmax(predicted)-1
-            print(action)
             new_observation, reward, done, score = env.step(action) # new_observation = novo mapa
             observation=new_observation
             if reward >= 1 or reward == -1:
                 if(reward >= 1):
-                    reward =1
+                    apples += 1
+                    reward = 1
                 game_reward += reward
             total_training_rewards += reward
-            if done:
+            
+            if done or (number_steps>500 and game_reward<10):
                 #print("Rewards: {} after n steps = {} with final reward = {}".format(total_training_rewards, episode, reward))
                 print("Finished after {} steps with reward = {}".format(number_steps, game_reward))
+                if(number_steps>500):
+                    break
                 #total_training_rewards += 1
+        steps+= number_steps
+    return steps/n_games, apples/n_games
+
+def generate_plots(models, names, n_games, filename, image_folder):
+    apples = []
+    steps = []
+
+    for i in range(len(models)):
+        new_path = image_folder+ "/" + names[i]
+        Path(new_path).mkdir(parents=True, exist_ok=True)
+        print("hey")
+        s, a = run_pretrained(models[i], n_games, new_path)
+        print("bye")
+        steps.append(s)
+        apples.append(a)
+    
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot()
+    ax1.bar(names, apples)
+    plt.savefig(image_folder+"/apples")
+
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot()
+    ax2.bar(names, steps)
+    plt.savefig(image_folder+"/steps")
+
+
 
 def generate_gif():
     png_dir = 'images'
@@ -319,3 +329,5 @@ def generate_gif():
 main()
 #generate_gif()
 #run_pretrained('AP2/models/test_model_45', 300)
+#generate_plots(['AP2/models/2layers', 'AP2/models/3layers','AP2/models/4layers'], ['2layer', '3layer','4layer'], 
+#               20, 'plot.png', 'AP2/images')

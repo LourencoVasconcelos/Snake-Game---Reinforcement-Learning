@@ -21,6 +21,16 @@ Q1: Explain and justify the architecture of your agent, describing the network, 
 Q1; Explique e justifique a arquitectura do seu agente, descrevendo a rede, os valores de entrada e saída e que experiências fez para escolher esta rede em particular.
 R1:
 
+Explicar Architecture, descrever network, input e output.
+Input: Board shape and number of diferent actions (to use that number on the last dense layer)
+Output: Model of the architecture explained above that will be used to predict the expected reward for each action.
+
+Depois: 
+De acordo com as experiências do primeiro trabalho testámos modelos à volta de X que foram melhorados para extrair resultados de imagens no primeiro trabalho e alterámos alguns parâmetros como o número de camadas e de neurónios por camada de modo a ver se algum destes parâmetros ia ter influência neste novo problema. Nas imagens Z1, Z2, Z3, podemos ver que diminuir o número de camadas convolucionais faz X, manter as do primeiro trabalho faz Y e aumentar faz H. Testámos também diferentes Poolings para o número de camadas que nos pareceu dar melhores resultados, testando Poolings sempre de 2,2 como visto na imagem H, sempre 3,3 como visto na imagem Y, ir aumentando como visto na imagem Z e ir diminuindo como visto na imagem K. Testámos também realizar menos poolings como pode ser visto na imagem K deu-nos piores resultados. Além de alterar o número de camadas convolucionais, testámos também aumentar e diminuir o número de camadas densas, como pode ser visto nas imagens X, Y e Z. Experimentámos ainda alterar a loss function para o mean squared error, mas como observado na imagem H os resultados só pioraram. e initialization RandomNormal(stddev=0.01)
+
+Plots - numero average de apples por jogo e numero de passos, número de passos por maçã
+Diferentes camadas Conv2D + Diferentes camadas densas 3 models // Diferentes Poolings cagar neste// Diferente número de Poolings //  // Diferente loss // Diferente initialiation
+Nestes plots mostramos o número de sobrevivência em vez do número de maçãs porque iriam demorar demasiado tempo a ter plots relevantes com o número de maçãs.
 
 Q2: Describe the scenario for which you tried to optimize your agent, justifying your choice and describing the experiments you did to select this scenario.
 Q2: Descreva o cenário para o qual tentou optimizar o seu agente, justificando a sua escolha e descrevendo que experiências fez para seleccionar este cenário.
@@ -31,11 +41,19 @@ Q3: Explain how you generate the experiences for training your agent. Do not for
 Q3: Explique como gerou as experiências para treinar seu agente. Não se esqueça de explicar os detalhes como o equilíbrio entre exploração aleatória e guiada (exploration e exploitation), como as experiências são selecionadas, que informação guarda em cada experiência, quão grande é o conjunto de experiências e com que frequência novas experiências são geradas. Justifique estas escolhas.
 R3:
 
+exploration feita no treino
 
 Q4: Explain how you trained your agent: the algorithm used, the discount factor (gamma), the schedule for generating new experiences and training the agent and other techniques. Justify your choices and explain what experiments you did and which alternatives you tried.
 Q4: Explique como treinou o seu agente: o algoritmo utilizado, o factor de desconto (gama), a coordenação da geração de novas experiências e treinao do agente, e outras técnicas que tenha usado. Justifique suas escolhas e explique que alternativas testou e como validou experimentalmente estas escolhas.
 R4:
 
+The algorithm that we implemented to train the agent was the Q-Learning algorithm since in this specific problem we want to choose an action that will have in consideration the maximum value (maximum reward) of the next step, this meaning, that will leave us closer to the apple or atleast not dying. 
+The discount factor (gamma) picked was -
+The schedule for generating new experiences and training the agent chosen was generating 50000 experiences with our heuristic before starting the train and every 10000 actions while training we generate 2000 more new experiences using our heuristic. We tried different alternatives like generating also 5000 and 10000 random experiences, after the 50000 generated with our heuristic, before training so our agent would also have some bad experiences to learn what not to do. But that did not seem to improve the predictions, it actually made them worse so we decided to keep only the experiences created by the heuristic before starting the train. We also tried having experiences being generated with our heuristic more often during training (instead of every 10000, it was every 5000) but that did not seem to improve the results. 
+We decided to train our agent every 16 steps. After trying every 4, 8, 16, 64, 100, we decided that 16 would be a good compromise between number of actions to make and training again since with less we would have litle change to the examples given to the agent and wouldn't be worth training him, and would also take longer to train the same number of examples. Training with less frequency would train faster the same number of examples but wouldn't give us such good results as training every 16 steps.
+
 Q5: Discuss this problem and your solution, describing the agent's performance (score, survival, etc.), which aspects of the game were most difficult for the agent to learn, how you tried to remedy these difficulties and what ideas you might have tried if you had more time.
 Q5: Discuta este problema e a sua solução, descrevendo o desempenho do agente (pontuação, sobrevivência, etc), que aspectos do jogo foram mais difíceis de aprender para o agente, como tentou colmatar essas dificuldades e que ideias ficaram que poderia experimentar se tivesse mais tempo.
 R5:
+
+Íamos escolher arquiteturas de redes e parâmetros com base em treinos maiores. Realizar mais testes onde aumentássemos mais a relva com diferentes growth_rates. 

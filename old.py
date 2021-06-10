@@ -190,6 +190,7 @@ def main():
     steps_to_update_target_model = 0
     total_training_rewards = 0
     i=0
+    i2=0
     for episode in range(train_episodes):
         number_steps = 0
         observation = env.reset()[0]
@@ -233,6 +234,10 @@ def main():
                     print("Copying main network weights to the target network weights")
                     target_model.set_weights(model.get_weights())
                     steps_to_update_target_model = 0
+                if(i>10000):
+                    i=0
+                    model.save('AP2/models/test_model_' + str(i2))
+                    i2 +=1
                 break
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay * episode)
         print(epsilon)
