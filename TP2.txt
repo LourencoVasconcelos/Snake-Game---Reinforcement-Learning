@@ -22,6 +22,7 @@ Q1; Explique e justifique a arquitectura do seu agente, descrevendo a rede, os v
 R1:
 
 Explicar Architecture, descrever network, input e output.
+Our agent's network consist of 4 convolutional layers where each is followed by a relu activation and a MaxPooling of 2 by 2, except the last one that is followed by a MaxPooling of 4 by 4. After the convolutional layers our model has a flatten layer to get all the features in a single dimension and 3 dense layers using the relu activation before the last layer which is a dense layer with 3 neurons (1 for each action).
 Input: Board shape and number of diferent actions (to use that number on the last dense layer)
 Output: Model of the architecture explained above that will be used to predict the expected reward for each action.
 
@@ -36,6 +37,7 @@ Q2: Describe the scenario for which you tried to optimize your agent, justifying
 Q2: Descreva o cenário para o qual tentou optimizar o seu agente, justificando a sua escolha e descrevendo que experiências fez para seleccionar este cenário.
 R2:
 
+The scenario for which we tried to optimize our agent was for a snake game with a board of 30 by 30 plus border (which would leave us with a 32 by 32 game) with a single apple and no grass. We chose this scenario because we tested to add grass with different growth rates and different rewards per grass eaten by the snake, but this did not seem to improve our model, in some cases where we tested with a high reward on grass our snake got stuck in an infinity loop eating only grass in the same loop and not caring about the apple. We also tested training our model with more apples per game, but after some tests and watching the images of our snake playing, she seemed to ignore most of the apples during train, and did not seem to improve the score after training. Besides testing with grass and more apples, we also tested with smaller boards. The results we obtained in these scenarios didn't seem to improve greatly the score and didn't help on the number of steps the snake survived. 
 
 Q3: Explain how you generate the experiences for training your agent. Do not forget to explain the details like the balance between exploitation and exploration, how experiences are selected, what information you store in each experience, how large is the pool of experiences and how frequently are new experiences generated. Justify your choices.
 Q3: Explique como gerou as experiências para treinar seu agente. Não se esqueça de explicar os detalhes como o equilíbrio entre exploração aleatória e guiada (exploration e exploitation), como as experiências são selecionadas, que informação guarda em cada experiência, quão grande é o conjunto de experiências e com que frequência novas experiências são geradas. Justifique estas escolhas.
@@ -56,4 +58,5 @@ Q5: Discuss this problem and your solution, describing the agent's performance (
 Q5: Discuta este problema e a sua solução, descrevendo o desempenho do agente (pontuação, sobrevivência, etc), que aspectos do jogo foram mais difíceis de aprender para o agente, como tentou colmatar essas dificuldades e que ideias ficaram que poderia experimentar se tivesse mais tempo.
 R5:
 
-Íamos escolher arquiteturas de redes e parâmetros com base em treinos maiores. Realizar mais testes onde aumentássemos mais a relva com diferentes growth_rates. 
+Íamos escolher arquiteturas de redes e parâmetros com base em treinos maiores. Realizar mais testes onde aumentássemos mais a relva com diferentes growth_rates.
+More tests with a bigger board and more apples 

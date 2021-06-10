@@ -56,16 +56,15 @@ def agent(state_shape, action_shape):
 
     model.add(keras.layers.Flatten(name='features'))
     model.add(keras.layers.Dense(64, activation='relu', kernel_initializer=init))
-    model.add(keras.layers.Dense(64, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(32, activation='relu', kernel_initializer=init))
     model.add(keras.layers.Dense(16, activation='relu', kernel_initializer=init))
-    model.add(keras.layers.Dense(action_shape, activation='linear', kernel_initializer=init))
+    model.add(keras.layers.Dense(action_shape, activation='linear', kernel_initializer=init)) #sigmoid activation
     model.compile(loss=tf.keras.losses.Huber(), optimizer=tf.keras.optimizers.Adam(lr=learning_rate), metrics=['accuracy'])
     print(model.summary())
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    discount_factor = 0.1
+    discount_factor = 0.5
     batch_size = 256
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
@@ -241,7 +240,7 @@ def main():
                     steps_to_update_target_model = 0
                 if(i>10000):
                     i=0
-                    model.save('AP2/models/0.1gamma_model_' + str(i2))
+                    model.save('AP2/models/0.5gamma_model_' + str(i2))
                     #print("Saved a model ")
                     i2 +=1
                     heuristic(env, replay_memory, 2000, board_shape)
