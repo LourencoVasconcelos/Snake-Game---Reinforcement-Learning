@@ -51,7 +51,7 @@ def agent(state_shape, action_shape):
     model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
     model.add(keras.layers.Conv2D(64,(4,4), padding="same"))
     model.add(keras.layers.Activation("relu"))
-    model.add(keras.layers.MaxPooling2D(pool_size=(4,4)))
+    #model.add(keras.layers.MaxPooling2D(pool_size=(4,4)))
     
 
     model.add(keras.layers.Flatten(name='features'))
@@ -64,7 +64,7 @@ def agent(state_shape, action_shape):
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    discount_factor = 0.6
+    discount_factor = 0.5
     batch_size = 256 
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
@@ -181,7 +181,7 @@ def main():
     decay = 0.01
     MIN_REPLAY_SIZE = 1024
     number_of_actions = 3
-    env = SnakeGame(30,30,border=1, max_grass = 0, food_amount = 1)
+    env = SnakeGame(14,14,border=1, max_grass = 0, food_amount = 1)
     board_shape = (env.board.shape[0]+2*env.border,env.board.shape[1]+2*env.border,env.board.shape[2])
 
     model = agent(board_shape, number_of_actions)
@@ -240,7 +240,7 @@ def main():
                     steps_to_update_target_model = 0
                 if(i>10000):
                     i=0
-                    model.save('AP2/models/0.6gamma_model_' + str(i2))
+                    model.save('AP2/models/smallerBoard_model_' + str(i2))
                     #print("Saved a model ")
                     i2 +=1
                     heuristic(env, replay_memory, 2000, board_shape)
@@ -307,12 +307,12 @@ def generate_plots(models, names, n_games, filename, image_folder):
     fig1 = plt.figure()
     ax1 = fig1.add_subplot()
     ax1.bar(names, apples)
-    plt.savefig(image_folder+"/apples_gamma")
+    plt.savefig(image_folder+"/apples_boards")
 
     fig2 = plt.figure()
     ax2 = fig2.add_subplot()
     ax2.bar(names, steps)
-    plt.savefig(image_folder+"/steps_gamma")
+    plt.savefig(image_folder+"/steps_boards")
 
 
 
@@ -332,5 +332,6 @@ def generate_gif():
 #               20, 'plot.png', 'AP2/images')
 #generate_plots(['AP2/models/0.1gamma', 'AP2/models/0.5gamma','AP2/models/0.8gamma','AP2/models/0.9gamma'],
 #               ['0.1gamma', '0.5gamma','0.8gamma', '0.9gamma'],   30, 'plot.png', 'AP2/images')
-generate_plots(['AP2/models/0.4gamma', 'AP2/models/0.5gamma','AP2/models/0.6gamma'],
-               ['0.4gamma', '0.5gamma','0.6gamma'],   30, 'plot.png', 'AP2/images')
+#generate_plots(['AP2/models/0.4gamma', 'AP2/models/0.5gamma','AP2/models/0.6gamma'],
+#               ['0.4gamma', '0.5gamma','0.6gamma'],   30, 'plot.png', 'AP2/images')
+generate_plots(['AP2/models/smallerBoard_model_4', 'AP2/models/0.5gamma'], ['16board','32board'],10, 'plot.png', 'AP2/images')
