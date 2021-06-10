@@ -64,8 +64,8 @@ def agent(state_shape, action_shape):
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    discount_factor = 0.9
-    batch_size = 256
+    discount_factor = 0.6
+    batch_size = 256 
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
     current_qs_list = model.predict(current_states)
@@ -240,7 +240,7 @@ def main():
                     steps_to_update_target_model = 0
                 if(i>10000):
                     i=0
-                    model.save('AP2/models/0.9gamma_model_' + str(i2))
+                    model.save('AP2/models/0.6gamma_model_' + str(i2))
                     #print("Saved a model ")
                     i2 +=1
                     heuristic(env, replay_memory, 2000, board_shape)
@@ -332,3 +332,5 @@ def generate_gif():
 #               20, 'plot.png', 'AP2/images')
 #generate_plots(['AP2/models/0.1gamma', 'AP2/models/0.5gamma','AP2/models/0.8gamma','AP2/models/0.9gamma'],
 #               ['0.1gamma', '0.5gamma','0.8gamma', '0.9gamma'],   30, 'plot.png', 'AP2/images')
+generate_plots(['AP2/models/0.4gamma', 'AP2/models/0.5gamma','AP2/models/0.6gamma'],
+               ['0.4gamma', '0.5gamma','0.6gamma'],   30, 'plot.png', 'AP2/images')
