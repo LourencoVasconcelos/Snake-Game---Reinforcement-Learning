@@ -64,7 +64,7 @@ def agent(state_shape, action_shape):
     return model
 
 def train(env, replay_memory, model, target_model, done):
-    discount_factor = 0.5
+    discount_factor = 0.9
     batch_size = 256
     mini_batch = random.sample(replay_memory, batch_size)
     current_states = np.array([transition[0] for transition in mini_batch])
@@ -240,7 +240,7 @@ def main():
                     steps_to_update_target_model = 0
                 if(i>10000):
                     i=0
-                    model.save('AP2/models/0.5gamma_model_' + str(i2))
+                    model.save('AP2/models/0.9gamma_model_' + str(i2))
                     #print("Saved a model ")
                     i2 +=1
                     heuristic(env, replay_memory, 2000, board_shape)
@@ -307,12 +307,12 @@ def generate_plots(models, names, n_games, filename, image_folder):
     fig1 = plt.figure()
     ax1 = fig1.add_subplot()
     ax1.bar(names, apples)
-    plt.savefig(image_folder+"/apples")
+    plt.savefig(image_folder+"/apples_gamma")
 
     fig2 = plt.figure()
     ax2 = fig2.add_subplot()
     ax2.bar(names, steps)
-    plt.savefig(image_folder+"/steps")
+    plt.savefig(image_folder+"/steps_gamma")
 
 
 
@@ -325,8 +325,10 @@ def generate_gif():
             images.append(imageio.imread(file_path))
     imageio.mimsave('movie.gif', images)
        
-main()
+#main()
 #generate_gif()
 #run_pretrained('AP2/models/test_model_45', 300)
 #generate_plots(['AP2/models/2layers', 'AP2/models/3layers','AP2/models/4layers'], ['2layer', '3layer','4layer'], 
 #               20, 'plot.png', 'AP2/images')
+#generate_plots(['AP2/models/0.1gamma', 'AP2/models/0.5gamma','AP2/models/0.8gamma','AP2/models/0.9gamma'],
+#               ['0.1gamma', '0.5gamma','0.8gamma', '0.9gamma'],   30, 'plot.png', 'AP2/images')
