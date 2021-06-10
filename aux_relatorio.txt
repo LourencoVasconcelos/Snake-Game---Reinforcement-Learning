@@ -1,1 +1,0 @@
-Input_Shape - shape of the image, YxY pixels and 3 channels E o número de ações (-1,0,1: esquerda, frente, direita)
