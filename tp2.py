@@ -51,7 +51,7 @@ def agent(state_shape, action_shape):
     model.add(keras.layers.MaxPooling2D(pool_size=(2,2)))
     model.add(keras.layers.Conv2D(64,(4,4), padding="same"))
     model.add(keras.layers.Activation("relu"))
-    #model.add(keras.layers.MaxPooling2D(pool_size=(4,4)))
+    model.add(keras.layers.MaxPooling2D(pool_size=(4,4)))
     
 
     model.add(keras.layers.Flatten(name='features'))
@@ -240,7 +240,7 @@ def main():
                     steps_to_update_target_model = 0
                 if(i>10000):
                     i=0
-                    model.save('AP2/models/smallerBoard_model_' + str(i2))
+                    model.save('AP2/models/best_model_' + str(i2))
                     #print("Saved a model ")
                     i2 +=1
                     heuristic(env, replay_memory, 2000, board_shape)
@@ -334,4 +334,3 @@ def generate_gif():
 #               ['0.1gamma', '0.5gamma','0.8gamma', '0.9gamma'],   30, 'plot.png', 'AP2/images')
 #generate_plots(['AP2/models/0.4gamma', 'AP2/models/0.5gamma','AP2/models/0.6gamma'],
 #               ['0.4gamma', '0.5gamma','0.6gamma'],   30, 'plot.png', 'AP2/images')
-generate_plots(['AP2/models/smallerBoard_model_4', 'AP2/models/0.5gamma'], ['16board','32board'],10, 'plot.png', 'AP2/images')
